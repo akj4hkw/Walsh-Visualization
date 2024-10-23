@@ -1,0 +1,255 @@
+---
+title: "Data Viz Module Project"
+author: "Xander Johansson"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  html_document:
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
+    theme: cosmo
+    code_folding: show
+---
+## TOPIC
+
+General Topic/Overview: **Contextualizing Sports Absurdities and Performance**
+
+For this report, the focus is on contextualizing the extraordinary and historic achievement of Gretchen Walsh's record-breaking 100 butterfly swim on March 22nd, 2024 at the 2024 NCAA Division I Women's Championships.
+
+**Important Notes/Abbreviations:**
+
+- W = Women's, M = Men's
+- SCY = Short Course Yards (NCAA Distance)
+- Fly = Butterfly
+
+*Short Course Yards (SCY)* refers to the length of the pool/lane. SCY swims take place in pools/lane that are 25 yards in length. This differs from other formats such as LCY (Long Course Yards: 50 yards), SCM (Short Course Meters: 25 meters), and LCM (Long Course Meters: 50 meters).
+
+Swim events follow this format: Gender, Distance, Stroke, Measurement. For example, *W 100 Fly SCY* stands for Women's 100 Yard Butterfly, Short Course Yards.
+
+## QUESTIONS
+
+* How does Gretchen Walsh's performance in the 100 fly compare to other top performers in the same event over recent years?
+
+* How has the Short Course Yards (SCY) Women's 100 Fly record changed over time, and what role did Gretchen Walsh play in its evolution? How does Walsh's performance compare to previous record-breaking achievements in the same event?
+
+* How significant is Gretchen Walsh's record-breaking performance in the broader historical context of SCY achievements? To what extent did Walsh's swim demonstrate dominance in the sport?
+
+## AUDIENCE
+
+Fans of swimming, sports enthusiasts, analysts, and journalists interested in understanding and appreciating the significance of Gretchen Walsh's achievement.
+
+## DATA
+
+The data for this analysis was obtained from two main sources on March 23rd & 24th, 2024:
+
+1. **USA Swimming**: The national governing body for competitive swimming in the United States. They collect and store data from officially sanctioned meets across the country. The data accessed included:
+    - [Top 100 Performers SCY W 100 Fly](https://www.usaswimming.org/times/popular-resources/event-rank-search) (Record Progress.csv): Data on the top 100 performers in the SCY Women's 100 Fly event from 2020 to 2024, including their times and ranks.
+    
+    | Variable | Information |
+|:-|:-|
+| Time | Length (in Seconds) of the Swim |
+| Athlete | Name of the Athlete |
+| Swim Date | Date of the Swim |
+    - [All Time Top Performances W 100 Fly SCY Fly](https://www.usaswimming.org/times/data-hub/all-time-top-performers) (Top Performers.csv): Data on the top all time W 100 Fly SCY performances, including the swim date, time, and athlete details.
+    
+  | Variable | Information |
+|:-|:-|
+| Rank | Rank of the Swim in the Competition Year |
+| Time | Length (in Seconds) of the Swim |
+| Full Name | Name of the Athlete|
+| Age | Age of the Athlete |
+| LSC | Local Swimming Committee (local governing body) |
+| Event | Name of the Event (ex: 100 FL SCY) |
+| Meet Name | Name of the Meet (ex: 2024 NCAA Division I Women's Championships)|
+| Time Standard | Which Meet Does this Swim Meet the Cutoff for? (ex: 2024 Summer Nationals) |
+| Competition Year | Competition Year of Swim | 
+
+
+2. **SwimSwam**: A popular swimming news organization known for its coverage of premier swimming events. The data accessed from SwimSwam included:
+    - [SwimSwam: Gretchen Walsh's Absurd Performance](https://swimswam.com/trying-to-contextualize-the-absurdity-of-gretchen-walshs-47-42-in-the-100-fly/) (Gap.csv): Data on the record percentage time difference in all NCAA Championship Meet SCY events, highlighting the significance of Gretchen Walsh's performance. For context, the percentage time difference in SCY event gaps is a common metric used to assess dominance in collegiate swimming. It compares the performance of interest, such as Gretchen Walsh's SCY 100 Fly, with the slowest swim in the 'B Final' (16th place). This comparison allows for a more accurate assessment of a swimmer's dominance relative to their peers, especially compared to simply comparing against the next fastest swimmer, which may not accurately reflect historical dominance.
+    
+    
+| Variable | Information |
+|:-|:-|
+| Event | Name of the Event (ex: W 100 Fly) |
+| 1st | Name of the Winning Athlete (1st in the 'A Final')  |
+| Time 1st | The Length (in Seconds) of the Winning Athlete's Swim |
+| 16th | Name of the Last Athlete (16th Overall, 8th in the 'B Final')  |
+| Time 16th | The Length (in Seconds) of the Last Athlete's Swim |
+| Gap | Percentage Time Difference Between 1st and 16th |
+
+
+### Load packages
+
+```{r, message = FALSE}
+library(tidyverse)
+```
+
+### Read in data  
+
+```{r, message = FALSE}
+library(readr)
+progress <- read_csv("Record Progress.csv") #data on the W 100 Fly SCY record since 2016
+top <- read_csv("Top Performers.csv") #data on top W 100 Fly SCY swims 2020-2024
+gap <- read_csv("Gap.csv") #data on the gap between 1st and 16th of the most dominant swims in SCY history
+```
+
+### Review/clean datasets
+```{r}
+#modifying the Record Progress data
+progress <- progress %>% 
+  rename(Date = `Swim Date`) #rename swim date to just date
+progress$Date <- as.Date(progress$Date, format = "%m/%d/%Y") #format swim data column as a date type
+progress <- progress %>% arrange(Date) #arrange data set by date
+#calculate time difference between consecutive points and round to two decimal places
+progress$Time_Diff <- c(NA, round(diff(progress$Time), 2))
+
+
+#modifying the Top Performances Data
+top <- top %>%
+  select(-FOREIGN, -RESULTS) #deleting unnecessary columns
+
+
+#modifying the % Time Difference data
+gap$EVENT <- factor(gap$EVENT, levels = gap$EVENT[order(gap$GAP, decreasing = FALSE)]) #order event column based on the $ gap
+gap$GAP <- as.numeric(gsub("%", "", gap$GAP)) #% signs on the graph look very busy so convert % numbers to numeric
+```
+
+```{r}
+
+#display the structure of the record progress dataset
+str(progress)
+#display summary statistics of the record progress dataset
+summary(progress)
+#display the first few rows of the progress dataset
+head(progress)
+
+#display the structure of the top performers dataset
+str(top)
+# Display summary statistics of the top performers dataset
+summary(top)
+#display the first few rows of the top performers dataset
+head(top)
+
+#display the structure of the % time difference dataset
+str(gap)
+#display summary statistics of the % time difference dataset
+summary(gap)
+#display the first few rows of the % time difference dataset
+head(gap)
+```
+
+## DATA VIZ
+
+### Data Viz 1
+
+How does Gretchen Walsh’s performance in the 100 fly compare to other top performers in the same event over recent years?
+
+```{r}
+ggplot(top, aes(x = TIME, y = `COMPETITION YEAR`, color = `COMPETITION YEAR`)) + #plotting time and competition year for each of the top 100 performers
+  geom_point(position = position_jitter(width = .1, height = .2), alpha = .1) +  #adding jitter to the scatter plot so audience can more easily see the distribution of the points
+  geom_point(data = subset(top, `FULL NAME` == "Walsh, Gretchen"), color = "#F84C1E", size = 2) +  #highlight the points of Walsh's swims so audience can see her times in the context of others and see her progression
+  labs(x = "Time (seconds)", y = "", #add text to title, subtitle, x axis title
+       title = "Top 100 Performers: W 100 Fly SCY (2020-2024)",
+       subtitle = "and Gretchen Walsh's Rank",
+       caption = "Data source: USA Swimming") +
+  theme_minimal() + #change theme to minimal
+  scale_x_reverse() +  #reverse x-axis so the plot is hotizontal 
+  geom_text(data = subset(top, `FULL NAME` == "Walsh, Gretchen"), aes(label = RANK), fontface = "bold.italic", color = "#F84C1E", size = 4.5, vjust = -1.3, family = "serif") + #add labels for Gretchen Walsh's ranks
+  theme(plot.title = element_text(size = 16, face = "bold.italic"), #format title, subtitle, and axis titles and make sure they match
+        plot.subtitle = element_text(size = 14, face = "bold", color = "#F84C1E", hjust = 0.02, family = "serif"),
+        axis.title = element_text(size = 14, family = "serif", face = "bold"),
+        axis.text.x = element_text(size = 12, family = "serif"),
+        axis.text.y = element_text(size = 12, family = "serif"),
+        panel.grid.minor.y = element_blank(), #get rid of gridlines
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+         panel.grid.major.x = element_blank()) +
+  guides(color = FALSE) #get rid of legend
+
+```
+
+
+### Data Viz 2
+
+How has the Short Course Yards (SCY) Women's 100 Fly record changed over time, and what role did Gretchen Walsh play in its evolution? How does Walsh's performance compare to previous record-breaking achievements in the same event?
+
+```{r, fig.width=8, fig.height=6}
+ggplot(progress, aes(Date, Time)) + #plot date and time
+  geom_segment(aes(xend = lag(Date), yend = lag(Time)), color = "#232D4B", size = 2) + #draw a segment of the time progression
+  geom_segment(data = tail(progress, 2), aes(x = Date, y = Time, xend = lag(Date), yend = lag(Time)), color = "#F84C1E", size = 1.5) + #draw a another segment of a different color that visualizes Walsh's most recent drop of the record
+  geom_text(aes(label = ifelse(Athlete == "Kelsi Dahlia", Time, "")), color = '#495E9D', hjust = -.4, vjust = 4, size = 3.5, family = "serif") + #add the time of the orginial record as a baseline
+  geom_text(aes(label = ifelse(Athlete == "Kelsi Dahlia", Athlete, "")), hjust = 0, vjust = 2.5, size = 3, family = "serif") + #add name onto first data point
+  geom_text(aes(label = ifelse(Athlete != "Gretchen Walsh" & Athlete != "Kelsi Dahlia" & Athlete != "Maggie MacNeil", Athlete, "")), hjust = -.15, vjust = -0.7, size = 3, family = "serif") + #this and the rest of the geom_text labels I make custom labels for each point so the labels are positioned exactly where i want them
+  geom_text(aes(label = ifelse(Athlete == "Maggie MacNeil", Athlete, "")), hjust = 0, vjust = -2, size = 3, family = "serif") +
+  geom_text(aes(label = ifelse(Athlete == "Louise Hansson", Time_Diff, "")), hjust = -3.8, vjust = -0.75, size = 3, family = "serif") +
+  geom_text(aes(label = ifelse(Athlete == "Maggie MacNeil", Time_Diff, "")), hjust = -3.5, vjust = -2, size = 3, family = "serif") +
+  geom_text(aes(label = ifelse(Athlete == "Kate Douglass", Time_Diff, "")), hjust = -3.5, vjust = -.7, size = 3, family = "serif") +
+  geom_text(aes(label = ifelse(Time == "48.25", Athlete, "")), hjust = 1.2, vjust = 1, size = 3, family = "serif") +
+  geom_text(aes(label = ifelse(Time == "48.25", Time_Diff, "")), hjust = 2.25, vjust = 2.5, size = 3, family = "serif") +
+  geom_text(aes(label = ifelse(Time == "47.42", Athlete, "")), hjust = 1.1, vjust = 0.5, size = 4, color = "#F84C1E", fontface = "bold.italic") + #change the color of the data label's for the record so it stands out
+  geom_text(aes(label = ifelse(Time == "47.42", Time_Diff, "")), hjust = 2.35, vjust = 2.5, size = 4, color = "#F84C1E", fontface = "bold.italic") +
+  labs(x = "Year", y = "Time (seconds)", #add text for the titles and captions and axis
+       title = "W 100 Fly SCY Record Since 2016", 
+       subtitle = "Gretchen Walsh's Record-Breaking Swim (3/22/2024)", 
+       caption = "Data source: USA Swimming") +
+  theme_minimal() + #chang theme to minimal
+  coord_cartesian(ylim = c(47, 49.7)) + #change range of the y axis so the plot doesn't look as squished
+  scale_y_continuous(breaks = seq(47, 49.7, by = 0.5)) + #change the number of ticks in the plot so audience can more easily see where in the range each point lies
+  theme(panel.grid.major.x = element_blank(), #get rid of x axis grid lines
+        panel.grid.minor.x = element_blank(),
+        plot.title = element_text(size = 16, face = "bold.italic", hjust = .1), #change the formatting of the title and subtitle and y axis title and make sure they match
+        plot.subtitle = element_text(size = 14, face = "bold", color = "#F84C1E", hjust = 0.1, family = "serif"),
+        axis.title = element_text(size = 14, face = "bold", family = "serif"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 10, family = "serif"),
+        axis.text.y = element_text(size = 10, family = "serif"))
+```
+
+
+
+### Data Viz 3
+
+How significant is Gretchen Walsh's record-breaking performance in the broader historical context of SCY achievements? To what extent did Walsh's swim demonstrate dominance in the sport?
+
+```{r, fig.width=8, fig.height=10}
+colors <- c(rep("#C8CBD2", 24), "#F84C1E", rep("#C8CBD2", nrow(gap) - 25))  #make all the bars gray except the 25th bar (w 100 fly)
+
+ggplot(gap, aes(x = EVENT, y = GAP, fill = EVENT)) + #plot of event and gap
+  labs(title = "Comparison of % Time Difference in SCY Event Gaps", #add text to titles
+       subtitle = "Walsh's Record: 2nd Largest SCY % Difference Ever, Largest in Women's History",
+       caption = "Data source: SwimSwam") +
+  geom_bar(stat = "identity", width = .75) + #bar  chart
+  scale_fill_manual(values = colors) +  #set to custom fill colors
+  geom_text(aes(label = GAP), #add number labels to end of bar and make adjustments
+            hjust = -0.2, 
+            size = 3, 
+            color = "black",
+            family = "serif") +
+  geom_text(data = subset(gap, EVENT == "W 100 Fly"), #add event label for the w 100 fly and make it white with a larger size (different than the other events)
+            aes(label = EVENT, y = .05),
+            hjust = 0,
+            vjust = .3,
+            size = 4,
+            color = "white",
+            fontface = "bold.italic",  # Make the label bold
+            family = "serif") +  # Add text labels
+  geom_text(data = subset(gap, EVENT != "W 100 Fly"), #add event labels for events that aren't the w 100 fly to the base of the bars and make adjustments
+            aes(label = EVENT, y = .05),
+            hjust = 0, 
+            size = 3,
+            family = "serif") +
+  coord_flip() + #make graph horizontal bar chart so it's easier to read
+  theme_void() + guides(fill = FALSE) + #change to void theme and get rid of legend
+  theme(plot.title = element_text(size = 16, face = "bold.italic", hjust = 0.15), #make adjustments to the size and syle of the title and subtitle
+        plot.subtitle = element_text(size = 14, color = "#F84C1E", hjust = .25, family = "serif"))
+   
+
+```
+
+
+
+
